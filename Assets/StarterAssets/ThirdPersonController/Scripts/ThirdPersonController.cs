@@ -1,4 +1,6 @@
-﻿ using UnityEngine;
+﻿ using System.Collections;
+ using UnityEngine;
+ using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM 
 using UnityEngine.InputSystem;
 #endif
@@ -45,6 +47,20 @@ namespace StarterAssets
 
         [Tooltip("Time required to pass before entering the fall state. Useful for walking down stairs")]
         public float FallTimeout = 0.15f;
+
+        public GameObject CollectableObject;
+        public GameObject FlagObject;
+        private bool hasFlag = false;
+        private Vector3 startingPOS;
+
+        public GameObject WinText;
+        public GameObject LoseText;
+        [SerializeField]
+        GameObject objectToMove;
+
+        private Transform OriginalLoc;
+        
+        
 
         [Header("Player Grounded")]
         [Tooltip("If the character is grounded or not. Not part of the CharacterController built in grounded check")]
@@ -130,6 +146,11 @@ namespace StarterAssets
             {
                 _mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
             }
+            CollectableObject.gameObject.SetActive(false);
+            startingPOS = transform.position;
+            WinText.SetActive(false);
+            LoseText.SetActive(false);
+            OriginalLoc = objectToMove.transform;
         }
 
         private void Start()
@@ -388,5 +409,54 @@ namespace StarterAssets
                 AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
             }
         }
+        
+        private void RespawnPlayer()
+        {
+            _controller.enabled = false;
+            transform.position = startingPOS;
+            _controller.enabled = true;
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            if (other.CompareTag("Fall"))
+            {
+                RespawnPlayer();
+                objectToMove.transform.position = OriginalLoc.position;
+                FlagObject.gameObject.SetActive(true);
+                CollectableObject.SetActive(false);
+                hasFlag = false;
+            }
+
+            if (other.CompareTag("Finish"))
+            {
+                if (hasFlag)
+                {
+                    WinText.SetActive(true);
+                    SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                }
+                else
+                {
+                    LoseText.SetActive(true);
+                    SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                }
+            }
+
+            if (other.CompareTag("Flag"))
+            {
+                hasFlag = true;
+                FlagObject.gameObject.SetActive(false);
+                CollectableObject.SetActive(true);
+            }
+        }
+
+        private IEnumerator QuitAfterDelay()
+        {
+            yield return new WaitForSeconds(4f);
+            Application.Quit();
+        }
     }
+    
+    
+    
 }
